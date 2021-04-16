@@ -2,12 +2,17 @@ package main
 
 import (
 	"encoding/csv"
-	"fmt"
+	"image/color"
+
 	// deep "github.com/patrikeh/go-deep"
 	// "github.com/patrikeh/go-deep/training"
 	"log"
 	"os"
 	"strconv"
+
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg"
 )
 
 type dataPoint struct {
@@ -31,7 +36,7 @@ type dataSet []dataPoint
 
 func main() {
 	data := loadData()
-	neuralnet(data)
+	plotData(data)
 }
 
 func loadData() dataSet {
@@ -48,6 +53,9 @@ func loadData() dataSet {
 
 	var data dataSet
 	for _, line := range csvLines {
+		if line[13] == "No" {
+			continue
+		}
 		rentedBikes, _ := strconv.Atoi(line[1])
 		hour, _ := strconv.Atoi(line[2])
 		temperature, _ := strconv.ParseFloat(line[3], 64)
@@ -74,14 +82,38 @@ func loadData() dataSet {
 			Holiday:             line[12],
 			FunctioningDay:      line[13],
 		}
-		fmt.Println(dataPoint.Date, dataPoint.RentedBikes, dataPoint.Hour, dataPoint.Temperature, dataPoint.Humidity, dataPoint.WindSpeed,
-					dataPoint.Visibility, dataPoint.DewPointTemperature, dataPoint.SolarRadiation, dataPoint.Rainfall, dataPoint.Snowfall,
-					dataPoint.Season, dataPoint.Holiday, dataPoint.FunctioningDay)
+		// fmt.Println(dataPoint.Date, dataPoint.RentedBikes, dataPoint.Hour, dataPoint.Temperature, dataPoint.Humidity, dataPoint.WindSpeed,
+		// 	dataPoint.Visibility, dataPoint.DewPointTemperature, dataPoint.SolarRadiation, dataPoint.Rainfall, dataPoint.Snowfall,
+		// 	dataPoint.Season, dataPoint.Holiday, dataPoint.FunctioningDay)
 		data = append(data, dataPoint)
 	}
 	return data
 }
 
-func neuralnet(data dataSet) {
+func plotData(data dataSet) {
+	p := plot.New()
+	p.X.Label.Text = "Rented Bikes"
+	p.Y.Label.Text = "Wind Speed"
+	p.Add(plotter.NewGrid())
 
+	var n = len(data)
+	log.Println(n)
+	scatterData := make(plotter.XYs, n)
+	for i := range scatterData {
+		scatterData[i].X = float64(data[i].RentedBikes)
+		scatterData[i].Y = float64(data[i].WindSpeed)
+	}
+
+	s, err := plotter.NewScatter(scatterData)
+	if err != nil {
+		log.Println(err)
+	}
+	s.GlyphStyle.Color = color.RGBA{R: 255, B: 128, A: 255}
+
+	p.Add(s)
+	p.Legend.Add("scatter", s)
+
+	if err := p.Save(4*vg.Inch, 4*vg.Inch, "plot.png"); err != nil {
+		log.Println(err)
+	}
 }
